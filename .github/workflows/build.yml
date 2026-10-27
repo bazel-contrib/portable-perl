@@ -26,7 +26,7 @@ jobs:
     outputs:
       perl-version: ${{ steps.pick.outputs.version }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - id: pick
         shell: bash
         run: |
@@ -83,7 +83,7 @@ jobs:
             runner: windows-2025
             mingw: true
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # The -gnu flavour is upstream Perl built with mingw-w64 GCC from the
       # image's own MSYS2 (release: false), in the UCRT64 environment: that is
@@ -190,7 +190,7 @@ jobs:
           - platform: aarch64-linux-musl-static
             runner: ubuntu-24.04-arm
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/download-artifact@v4
         with:
           name: perl-${{ needs.resolve.outputs.perl-version }}-${{ matrix.platform }}
