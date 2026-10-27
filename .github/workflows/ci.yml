@@ -26,7 +26,7 @@ jobs:
     name: lint
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Check shell scripts
         run: |
@@ -93,7 +93,7 @@ jobs:
 
       # GitHub has no "needs: all"; a job added without being listed above
       # would not gate merges. Make that a failure here instead.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Fail if a job is missing from `needs` above
         run: |
           diff <(sed -n '/^jobs:/,$p' .github/workflows/ci.yml | grep -oE '^  [A-Za-z0-9_-]+:$' | tr -d ' :' | grep -vx success | sort) \
