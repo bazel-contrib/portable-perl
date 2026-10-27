@@ -51,7 +51,7 @@ permissions:
 jobs:
   catalogue:
     name: read versions.json
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     outputs:
       versions: ${{ steps.read.outputs.versions }}
       count: ${{ steps.read.outputs.count }}
@@ -85,7 +85,7 @@ jobs:
     name: publish
     if: github.ref_type == 'tag' || inputs.publish
     needs: [catalogue, build]
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     permissions:
       contents: write      # create the tag and the release
       id-token: write      # mint the Sigstore signing certificate
