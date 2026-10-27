@@ -56,7 +56,7 @@ jobs:
       versions: ${{ steps.read.outputs.versions }}
       count: ${{ steps.read.outputs.count }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - id: read
         shell: bash
         run: |
@@ -91,7 +91,7 @@ jobs:
       id-token: write      # mint the Sigstore signing certificate
       attestations: write  # record the provenance attestation
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Pick the build id
         id: build
