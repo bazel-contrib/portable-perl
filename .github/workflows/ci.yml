@@ -81,3 +81,30 @@ jobs:
     uses: ./.github/workflows/build.yml
     with:
       perl-version: ${{ inputs.perl-version || '' }}
+
+  # The single check for branch protection to require: it depends on every
+  # other job and fails unless each succeeded. A failed dependency does not do
+  # that by itself. Without `if: always()` this job would be *skipped*, and
+  # branch protection treats a skipped required check as passed; with it, the
+  # job runs and reports success whatever it needed. Hence the explicit check.
+  success:
+    name: CI Success
+    if: always()
+    needs: [lint, build]
+    runs-on: ubuntu-24.04
+    env:
+      NEEDS: ${{ toJSON(needs) }}
+    steps:
+      - name: Fail unless every job succeeded
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'skipped')
+        run: |
+          echo "${NEEDS}"
+          exit 1
+
+      # GitHub has no "needs: all"; a job added without being listed above
+      # would not gate merges. Make that a failure here instead.
+      - uses: actions/checkout@v4
+      - name: Fail if a job is missing from `needs` above
+        run: |
+          diff <(sed -n '/^jobs:/,$p' .github/workflows/ci.yml | grep -oE '^  [A-Za-z0-9_-]+:$' | tr -d ' :' | grep -vx success | sort) \
+               <(jq -r 'keys[]' <<< "${NEEDS}" | sort)
