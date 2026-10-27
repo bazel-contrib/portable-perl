@@ -1,0 +1,4 @@
+# Code owners are requested for review on every pull request and, with
+# "Require review from Code Owners" enabled in branch protection, must approve
+# before a merge. Everything in this repository is owned jointly.
+*   @UebelAndre @skeletonkey
