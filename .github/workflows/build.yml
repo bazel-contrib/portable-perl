@@ -150,7 +150,7 @@ jobs:
 
       # The version is part of the name: a release run builds several versions
       # in one workflow run, and artifact names must be unique within a run.
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: perl-${{ needs.resolve.outputs.perl-version }}-${{ matrix.platform }}
           path: dist/*
