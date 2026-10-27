@@ -22,7 +22,7 @@ permissions:
 jobs:
   resolve:
     name: resolve version
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     outputs:
       perl-version: ${{ steps.pick.outputs.version }}
     steps:
