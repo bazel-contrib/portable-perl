@@ -24,7 +24,7 @@ and no version is left on an older build known to be wrong. Consumers pin a
 build together with a Perl version:
 
 ```
-https://github.com/UebelAndre/portable-perl/releases/download/<build>/perl-<version>-<platform>.tar.xz
+https://github.com/bazel-contrib/portable-perl/releases/download/<build>/perl-<version>-<platform>.tar.xz
 ```
 
 ## Support and SLAs
@@ -45,7 +45,7 @@ CPAN modules and anything built on top of the archives are out of scope.
         their upstream release.
     * Development releases (the odd-numbered 5.x series and release candidates)
         are not guaranteed to be made available.
-* **Patch releases** are made available on request, or when the maintainers judge 
+* **Patch releases** are made available on request, or when the maintainers judge
 there is a significant security reason to ship one.
 
 ### How long releases stay available
@@ -134,7 +134,7 @@ sha256sum -c SHA256SUMS
 # Provenance: binds the archive's digest to the workflow run and commit
 # that produced it.
 gh attestation verify perl-5.44.0-x86_64-linux-gnu.tar.xz \
-  --repo UebelAndre/portable-perl
+  --repo bazel-contrib/portable-perl
 ```
 
 ## What is in the archive
