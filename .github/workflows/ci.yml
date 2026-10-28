@@ -2,10 +2,8 @@ name: ci
 
 on:
   pull_request:
-    paths-ignore: ['**.md', 'LICENSE']
   push:
     branches: [main]
-    paths-ignore: ['**.md', 'LICENSE']
   workflow_dispatch:
     inputs:
       perl-version:
@@ -24,8 +22,58 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  # Decides whether the change needs the lint and build jobs at all. This is a
+  # job rather than `paths-ignore` on the triggers because the required
+  # "CI Success" check must report on every pull request: a workflow that
+  # never starts leaves the check pending and the PR unmergeable.
+  changes:
+    name: changed files
+    runs-on: ubuntu-26.04
+    outputs:
+      code: ${{ steps.classify.outputs.code }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - id: classify
+        shell: bash
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          case "${EVENT}" in
+            pull_request)
+              git fetch -q origin "${BASE_REF}"
+              range="$(git merge-base "origin/${BASE_REF}" HEAD)..HEAD" ;;
+            push)
+              range="${BEFORE}..${AFTER}" ;;
+            *)
+              # Manual runs always build.
+              echo "code=true" >> "$GITHUB_OUTPUT"; exit 0 ;;
+          esac
+
+          # Changes confined to documentation and the licence need no build.
+          # If the range cannot be resolved (first push of a branch), build.
+          if ! changed="$(git diff --name-only "${range}" 2>/dev/null)"; then
+            changed="(unknown)"
+          fi
+          printf '%s\n' "${changed}"
+          # (no `grep -q`: with pipefail its early exit can SIGPIPE the producer)
+          if [ -n "$(printf '%s\n' "${changed}" | grep -vE '(^|/)[^/]+\.md$|^LICENSE$' || true)" ]; then
+            echo "code=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "code=false" >> "$GITHUB_OUTPUT"
+            echo "Only documentation changed; skipping lint and build."
+          fi
+
   lint:
     name: lint
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@v7
@@ -78,6 +126,8 @@ jobs:
           PY
 
   build:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     uses: ./.github/workflows/build.yml
     with:
       perl-version: ${{ inputs.perl-version || '' }}
@@ -87,16 +137,21 @@ jobs:
   # that by itself. Without `if: always()` this job would be *skipped*, and
   # branch protection treats a skipped required check as passed; with it, the
   # job runs and reports success whatever it needed. Hence the explicit check.
+  # A skipped lint or build is accepted only when `changes` decided the change
+  # needed no build.
   success:
     name: CI Success
     if: always()
-    needs: [lint, build]
+    needs: [changes, lint, build]
     runs-on: ubuntu-26.04
     env:
       NEEDS: ${{ toJSON(needs) }}
     steps:
-      - name: Fail unless every job succeeded
-        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'skipped')
+      - name: Fail unless every job succeeded (or was skipped on purpose)
+        if: >-
+          contains(needs.*.result, 'failure') ||
+          contains(needs.*.result, 'cancelled') ||
+          (needs.changes.outputs.code != 'false' && contains(needs.*.result, 'skipped'))
         run: |
           echo "${NEEDS}"
           exit 1
