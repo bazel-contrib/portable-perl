@@ -22,11 +22,11 @@ permissions:
 jobs:
   resolve:
     name: resolve version
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     outputs:
       perl-version: ${{ steps.pick.outputs.version }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - id: pick
         shell: bash
         run: |
@@ -83,7 +83,7 @@ jobs:
             runner: windows-2025
             mingw: true
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # The -gnu flavour is upstream Perl built with mingw-w64 GCC from the
       # image's own MSYS2 (release: false), in the UCRT64 environment: that is
@@ -150,7 +150,7 @@ jobs:
 
       # The version is part of the name: a release run builds several versions
       # in one workflow run, and artifact names must be unique within a run.
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: perl-${{ needs.resolve.outputs.perl-version }}-${{ matrix.platform }}
           path: dist/*
@@ -190,8 +190,8 @@ jobs:
           - platform: aarch64-linux-musl-static
             runner: ubuntu-24.04-arm
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
         with:
           name: perl-${{ needs.resolve.outputs.perl-version }}-${{ matrix.platform }}
           path: dist

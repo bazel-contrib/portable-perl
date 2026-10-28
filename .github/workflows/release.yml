@@ -51,12 +51,12 @@ permissions:
 jobs:
   catalogue:
     name: read versions.json
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     outputs:
       versions: ${{ steps.read.outputs.versions }}
       count: ${{ steps.read.outputs.count }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - id: read
         shell: bash
         run: |
@@ -85,13 +85,13 @@ jobs:
     name: publish
     if: github.ref_type == 'tag' || inputs.publish
     needs: [catalogue, build]
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     permissions:
       contents: write      # create the tag and the release
       id-token: write      # mint the Sigstore signing certificate
       attestations: write  # record the provenance attestation
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Pick the build id
         id: build
@@ -119,7 +119,7 @@ jobs:
           echo "Publishing build ${tag}"
 
       - name: Collect artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           pattern: perl-*
           path: staging
@@ -155,7 +155,7 @@ jobs:
       # repository. Consumers can check it with:
       #     gh attestation verify <file> --repo ${{ github.repository }}
       - name: Attest build provenance
-        uses: actions/attest-build-provenance@v2
+        uses: actions/attest-build-provenance@v4
         with:
           subject-path: release/*.tar.xz
 
