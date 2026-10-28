@@ -1,0 +1,18 @@
+# Lint and format configuration for the repository's Python (build/*.py and
+# the CI helper scripts). Run through pre-commit; see .pre-commit-config.yaml.
+
+# The scripts run on whatever python3 the build images have; manylinux2014's
+# oldest is 3.6, which ruff cannot target, so 3.7 is the floor it checks for.
+target-version = "py37"
+line-length = 100
+
+[lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # import order
+    "B",   # bugbear
+    "UP",  # pyupgrade (within target-version)
+    "SIM", # simplify
+]

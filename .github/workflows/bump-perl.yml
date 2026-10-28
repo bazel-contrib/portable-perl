@@ -1,0 +1,63 @@
+name: bump-perl
+
+# Dependabot for the one dependency Dependabot cannot see: the Perl releases
+# pinned in versions.json. Weekly, build/bump-perl.py applies the catalogue
+# policy (new stable series added as default, point releases bumped in place,
+# nothing removed) and, if anything changed, this opens or refreshes a pull
+# request and starts CI on it.
+#
+# Needs the repository setting "Allow GitHub Actions to create and approve
+# pull requests". Starting CI explicitly is required because runs triggered
+# by GITHUB_TOKEN do not start other workflows -- except workflow_dispatch.
+
+on:
+  schedule:
+    - cron: '17 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: write
+
+jobs:
+  bump:
+    name: bump versions.json
+    runs-on: ubuntu-26.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - id: bump
+        shell: bash
+        run: python3 -I build/bump-perl.py --write
+
+      - name: Open or refresh the pull request
+        if: steps.bump.outputs.changed == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BASE: ${{ github.event.repository.default_branch }}
+          SLUG: ${{ steps.bump.outputs.slug }}
+        run: |
+          set -euo pipefail
+          branch="bump/perl-${SLUG}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B "${branch}"
+          git add versions.json
+          git commit -q -m "Bump Perl to ${SLUG//-/, }"
+          git push --force origin "${branch}"
+
+          if ! gh pr view "${branch}" >/dev/null 2>&1; then
+            # shellcheck disable=SC2016  # the body is literal markdown
+            gh pr create --base "${BASE}" --head "${branch}" \
+              --title "Bump Perl to ${SLUG//-/, }" \
+              --body "$(printf '%s\n' \
+                'Automated by `.github/workflows/bump-perl.yml` from the releases on <https://www.cpan.org/src/5.0/>.' \
+                '' \
+                'Checksums are the ones cpan.org publishes beside each tarball, verified against the download.' \
+                'Merging adds the version to every future release train; a new stable series also becomes `default`.')"
+          fi
+
+          # CI does not start by itself for pushes made with GITHUB_TOKEN.
+          gh workflow run ci.yml --ref "${branch}"

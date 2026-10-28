@@ -3,8 +3,10 @@
     "Single source of truth for what gets built and vendored.",
     "Every version under `perl` is built on every platform by each release",
     "(tag YYYYMMDD). `default` is the one version pull requests build.",
-    "To add a version, append to `perl` with the sha256 of the .tar.gz",
-    "from https://www.cpan.org/src/5.0/."
+    "build/bump-perl.py keeps `perl` current (new stable series added as",
+    "default, point releases bumped in place, nothing removed); to add a",
+    "version by hand, append it with the sha256 of the .tar.gz from",
+    "https://www.cpan.org/src/5.0/."
   ],
   "default": "5.44.0",
   "perl": {
