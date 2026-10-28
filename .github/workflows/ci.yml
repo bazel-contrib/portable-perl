@@ -105,6 +105,9 @@ jobs:
       - name: Check the smoke test compiles
         run: perl -c test/smoke.pl
 
+      - name: Run pre-commit (ruff lint and format)
+        run: pipx run pre-commit run --all-files --show-diff-on-failure
+
       - name: Check versions.json
         run: |
           python3 - <<'PY'

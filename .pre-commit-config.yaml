@@ -1,0 +1,9 @@
+# Install once with `uvx pre-commit install` (or `pipx run pre-commit install`);
+# CI runs the same hooks over the whole tree.
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.17.3
+    hooks:
+      - id: ruff-check
+        args: [--fix]
+      - id: ruff-format

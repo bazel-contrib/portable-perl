@@ -260,12 +260,22 @@ allowlist, confirms nothing carries debug info, and then runs
 the tree to a deeper path — including an end-to-end `xsubpp` run and a `dlopen`
 of twelve XS modules.
 
+## Development
+
+The repository's Python is linted and formatted by [ruff](https://docs.astral.sh/ruff/)
+through [pre-commit](https://pre-commit.com/); CI runs the same hooks. Install
+them once with `uvx pre-commit install` (or `pipx run pre-commit install`).
+
 ## Adding a Perl version, cutting a release
 
-1. Add an entry to [`versions.json`](versions.json) with the URL and SHA256 of
-   the `.tar.gz` from <https://www.cpan.org/src/5.0/>. Point `default` at it if
-   pull requests should build it; that is the only version CI builds on every
-   change.
+1. The catalogue in [`versions.json`](versions.json) is kept current by
+   [`bump-perl.yml`](.github/workflows/bump-perl.yml), which runs weekly (or on
+   demand) and opens a pull request when cpan.org has something new: a stable
+   series newer than any listed is added and becomes `default` -- the one
+   version pull-request CI builds -- and a listed series is bumped in place to
+   its latest point release. Nothing is removed automatically; retiring a
+   series is a deliberate edit. To add a version by hand, append an entry with
+   the URL and SHA256 of the `.tar.gz` from <https://www.cpan.org/src/5.0/>.
 2. Actions → **release** → *Run workflow*, with **publish** left off. That
    builds and verifies the whole catalogue without publishing, which is where
    an older Perl meeting a newer compiler shows up. Any version-specific
