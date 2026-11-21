@@ -39,17 +39,21 @@ readonly PYTHON
 # would otherwise travel in %Config (libpth, incpth, full_ar, ...) to hosts
 # that have never heard of them. postprocess-unix.sh drops them and
 # verify-unix.sh fails the archive if any survive, so keep the two in step by
-# editing only this list.
+# editing only this list. Entries are extended regexes anchored at the start
+# of a path; the scrub matches whole components, the scan greps for them.
 #
-#   /opt/rh  Software Collections, where manylinux2014 keeps devtoolset.
-#
-# The macOS archives carry the runner's /Applications/Xcode_<ver>.app SDK
-# directories the same way. Not listed yet: on macOS libpth is also how
-# MakeMaker finds the SDK's .tbd stubs, so dropping it needs a replacement
-# that exists on every Mac, not just a deletion.
+#   /opt/rh              Software Collections, where manylinux2014 keeps
+#                        devtoolset.
+#   /Applications/Xcode  The GitHub runner's versioned Xcode (Xcode_16.4.app)
+#                        and its SDK. Dropping it costs MakeMaker nothing:
+#                        ExtUtils::Liblist reruns `cc -E -v` to find the live
+#                        compiler's directories, discards any that do not
+#                        exist, and on darwin resolves -lfoo through dyld,
+#                        which serves /usr/lib (kept) from the shared cache.
 # shellcheck disable=SC2034  # consumed by the scripts that source this file
 BUILD_IMAGE_ROOTS=(
-    /opt/rh
+    '/opt/rh'
+    '/Applications/Xcode[^/]*\.app'
 )
 
 # Minimal JSON reader so the build scripts do not depend on jq being present in

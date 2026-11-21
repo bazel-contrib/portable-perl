@@ -281,19 +281,21 @@ PY
 # BUILD_IMAGE_ROOTS in common.sh. Nothing in the interpreter reads them, but
 # ExtUtils::Liblist resolves `-lfoo` against libpth and DynaLoader falls back
 # to it, so they are a leak with teeth, and the archive should not name the
-# machine that built it in any case. Directory lists lose the offending
-# entries; a single pathname (full_ar) falls back to a PATH lookup, which is
-# how cc, ld and make are already recorded. The standard /usr/lib entries stay
-# so MakeMaker behaves as it does on a system perl.
+# machine that built it in any case. Path lists lose the offending entries
+# (timeincl may end up empty; nothing reads it). The full_* keys name one
+# executable each, and fall back to a PATH lookup, which is how cc, ld and
+# make are already recorded. The standard /usr/lib entries stay so MakeMaker
+# behaves as it does on a system perl.
 
 log "Dropping build-image toolchain paths from %Config"
 "${PYTHON}" - "${archdir}" "${BUILD_IMAGE_ROOTS[@]}" <<'PY'
 import os, re, stat, sys
 
-archdir, roots = sys.argv[1], sys.argv[2:]
+archdir = sys.argv[1]
+roots = [re.compile(r + "(/|$)") for r in sys.argv[2:]]
 
 def under_root(token):
-    return any(token == r or token.startswith(r + "/") for r in roots)
+    return any(r.match(token) for r in roots)
 
 # `key='value'` in Config_heavy.pl's embedded config.sh, and `key => 'value',`
 # in the bootstrap hash Config.pm inlines. Only single-quoted values are path
@@ -312,7 +314,7 @@ def scrub(path):
         if not any(under_root(t) for t in tokens):
             return m.group(0)
         kept = [t for t in tokens if not under_root(t)]
-        if not kept and len(tokens) == 1:
+        if not kept and head.strip().startswith("full_"):
             kept = [os.path.basename(tokens[0])]
         new = " ".join(kept)
         print("#   %s%r -> %r" % (head.strip(), value, new))

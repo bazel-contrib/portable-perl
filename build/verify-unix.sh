@@ -73,12 +73,12 @@ leak_patterns=(
     '/Users/runner/work'
     '/private/var/folders'
     '/opt/portable-perl'
-    'portable-perl\.[A-Za-z0-9]\{8\}'   # the mktemp -d template
+    'portable-perl\.[A-Za-z0-9]{8}'   # the mktemp -d template
 )
 # Plus the toolchain roots that exist only inside the build images.
 leak_patterns+=("${BUILD_IMAGE_ROOTS[@]}")
 for pat in "${leak_patterns[@]}"; do
-    hits="$(grep -rIl "${pat}" "${root}" 2>/dev/null || true)"
+    hits="$(grep -rIlE "${pat}" "${root}" 2>/dev/null || true)"
     if [[ -n "${hits}" ]]; then
         printf 'FAIL - no build-host path matching %s\n' "${pat}"
         # shellcheck disable=SC2086  # deliberate split: one offending file per line
