@@ -41,7 +41,10 @@ chmod -R u+w "${PREFIX}"
 # bytes here are paid for on every build that uses the toolchain.
 
 log "Pruning"
-rm -rf "${PREFIX}/lib/${PERL_VERSION}/pod"
+# pod/ holds the perl*.pod manuals, with one exception: perldiag.pod is runtime
+# data. diagnostics.pm (and bin/splain, the same code) parse it at load time
+# and look only under $privlib/pod, so without it `use diagnostics` dies.
+find "${PREFIX}/lib/${PERL_VERSION}/pod" -mindepth 1 ! -name 'perldiag.pod' -delete
 rm -rf "${PREFIX}/man" "${PREFIX}/share/man" "${PREFIX}/html"
 # Unicode normalisation *test* data, not needed at runtime.
 rm -f "${PREFIX}/lib/${PERL_VERSION}/unicore/TestNorm.pl"
@@ -51,7 +54,7 @@ find "${PREFIX}" -name '.packlist' -delete
 find "${PREFIX}" -name 'perllocal.pod' -delete
 # Stand-alone .pod files. Inline POD inside .pm files is deliberately kept:
 # some modules read their own documentation at runtime.
-find "${PREFIX}" -name '*.pod' -delete
+find "${PREFIX}" -name '*.pod' ! -name 'perldiag.pod' -delete
 
 # --- 2. strip ---------------------------------------------------------------
 #
@@ -268,6 +271,66 @@ if not os.path.exists(heavy):
     sys.exit("Config_heavy.pl not found in %s" % archdir)
 edit(heavy, widen_heavy)
 edit(os.path.join(archdir, "Config.pm"), wrap_inline)
+PY
+
+# --- 4d. drop the build image's toolchain directories --------------------------
+#
+# Configure records where the build compiler looked for headers and libraries
+# (incpth, libpth, libspath) and the full path of its ar (full_ar). Inside the
+# build image those are under roots that exist nowhere else; see
+# BUILD_IMAGE_ROOTS in common.sh. Nothing in the interpreter reads them, but
+# ExtUtils::Liblist resolves `-lfoo` against libpth and DynaLoader falls back
+# to it, so they are a leak with teeth, and the archive should not name the
+# machine that built it in any case. Directory lists lose the offending
+# entries; a single pathname (full_ar) falls back to a PATH lookup, which is
+# how cc, ld and make are already recorded. The standard /usr/lib entries stay
+# so MakeMaker behaves as it does on a system perl.
+
+log "Dropping build-image toolchain paths from %Config"
+"${PYTHON}" - "${archdir}" "${BUILD_IMAGE_ROOTS[@]}" <<'PY'
+import os, re, stat, sys
+
+archdir, roots = sys.argv[1], sys.argv[2:]
+
+def under_root(token):
+    return any(token == r or token.startswith(r + "/") for r in roots)
+
+# `key='value'` in Config_heavy.pl's embedded config.sh, and `key => 'value',`
+# in the bootstrap hash Config.pm inlines. Only single-quoted values are path
+# lists; nothing else in either file is worth touching.
+line = re.compile(r"^(\s*\w+(?:=| => ))'([^']*)'", re.M)
+
+def scrub(path):
+    if not os.path.exists(path):
+        return
+    with open(path, encoding="utf-8", errors="surrogateescape") as fh:
+        text = fh.read()
+
+    def repl(m):
+        head, value = m.group(1), m.group(2)
+        tokens = value.split()
+        if not any(under_root(t) for t in tokens):
+            return m.group(0)
+        kept = [t for t in tokens if not under_root(t)]
+        if not kept and len(tokens) == 1:
+            kept = [os.path.basename(tokens[0])]
+        new = " ".join(kept)
+        print("#   %s%r -> %r" % (head.strip(), value, new))
+        return "%s'%s'" % (head, new)
+
+    new = line.sub(repl, text)
+    if new == text:
+        return
+    mode = stat.S_IMODE(os.stat(path).st_mode)
+    os.chmod(path, mode | stat.S_IWUSR)
+    try:
+        with open(path, "w", encoding="utf-8", errors="surrogateescape") as fh:
+            fh.write(new)
+    finally:
+        os.chmod(path, mode)
+
+scrub(os.path.join(archdir, "Config_heavy.pl"))
+scrub(os.path.join(archdir, "Config.pm"))
 PY
 
 # --- 5. make bin/ scripts relocatable ---------------------------------------
