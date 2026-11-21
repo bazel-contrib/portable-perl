@@ -201,9 +201,12 @@ if (($Config{d_crypt} // '') eq 'define') {
 
 # --- pure-perl core modules --------------------------------------------------
 
+# diagnostics is the one core module that reads a stand-alone pod at load time
+# (pod/perldiag.pod, which the prune step has to keep), so it stands in for
+# "the prune did not take runtime data with it".
 for my $mod (qw(Getopt::Long File::Path File::Temp Test::More ExtUtils::MakeMaker
-                ExtUtils::ParseXS Encode::Encoding JSON::PP)) {
-    ok(eval "require $mod; 1", "core module loads: $mod");
+                ExtUtils::ParseXS Encode::Encoding JSON::PP diagnostics)) {
+    ok(eval "require $mod; 1", "core module loads: $mod") or print "#   $@";
 }
 
 # --- xsubpp ------------------------------------------------------------------

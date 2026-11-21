@@ -34,6 +34,24 @@ readonly PYTHON
 
 # json_get <file> <key> [<key>...]
 #
+# Toolchain roots that exist only inside the build images. Configure records
+# every directory the build compiler searched, and those under these roots
+# would otherwise travel in %Config (libpth, incpth, full_ar, ...) to hosts
+# that have never heard of them. postprocess-unix.sh drops them and
+# verify-unix.sh fails the archive if any survive, so keep the two in step by
+# editing only this list.
+#
+#   /opt/rh  Software Collections, where manylinux2014 keeps devtoolset.
+#
+# The macOS archives carry the runner's /Applications/Xcode_<ver>.app SDK
+# directories the same way. Not listed yet: on macOS libpth is also how
+# MakeMaker finds the SDK's .tbd stubs, so dropping it needs a replacement
+# that exists on every Mac, not just a deletion.
+# shellcheck disable=SC2034  # consumed by the scripts that source this file
+BUILD_IMAGE_ROOTS=(
+    /opt/rh
+)
+
 # Minimal JSON reader so the build scripts do not depend on jq being present in
 # the manylinux containers or on the macOS runners. Keys are passed as separate
 # arguments rather than a dotted path, because Perl version numbers are
@@ -165,13 +183,23 @@ PY
 # Replaces a script's `#!<abs path>/perl` line with a /bin/sh trampoline that
 # re-executes the sibling perl. `perl -x` makes the interpreter skip forward to
 # the `#!perl` line, so the Perl body below is unaffected.
+#
+# The trampoline must need nothing from the host but /bin/sh itself: it runs
+# before the hermetic perl does, and PATH may be empty or point at a tree with
+# no coreutils. So the directory comes from parameter expansion rather than
+# dirname(1). $0 is the path the kernel handed to sh, which has a slash in it
+# whenever the script was found through PATH or run as ./name; the bare-name
+# case is only reachable by an execve of a relative path, and means the cwd.
+# `${0%/*}` of "/name" is empty, which still yields "/perl".
 relocatable_shebang() {
     local script="$1" tmp
     tmp="${script}.portable-perl.tmp"
     {
         printf '#!/bin/sh\n'
         # shellcheck disable=SC2016  # the shell text must be emitted verbatim
-        printf 'exec "$(dirname "$0")"/perl -x "$0" "$@"\n'
+        printf 'case $0 in */*) d=${0%%/*} ;; *) d=. ;; esac\n'
+        # shellcheck disable=SC2016
+        printf 'exec "$d/perl" -x "$0" "$@"\n'
         printf '#!perl\n'
         tail -n +2 "${script}"
     } > "${tmp}"

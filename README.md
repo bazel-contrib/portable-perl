@@ -165,8 +165,9 @@ Documentation and install metadata are pruned — standalone `*.pod`, `man/`,
 `html/`, `.packlist`, `perllocal.pod` — because `rules_perl` globs the whole
 tree into the runfiles of every Perl action, so size here is paid on every
 build that uses the toolchain. POD embedded in `.pm` files is kept, since some
-modules read their own documentation at runtime. A Linux archive lands around
-7.5 MB compressed.
+modules read their own documentation at runtime, and so is `pod/perldiag.pod`,
+which `diagnostics` and `splain` parse at load time. A Linux archive lands
+around 7.5 MB compressed.
 
 ## How relocation works
 
@@ -183,8 +184,10 @@ Two extra steps happen after `make install`:
   shadows it for a few more. Both are patched so that plain keys such as
   `prefix`, `privlib`, `perlpath` and `startperl` also expand.
 - Scripts in `bin/` get a `/bin/sh` trampoline that re-executes them under the
-  neighbouring `perl` (`exec "$(dirname "$0")"/perl -x "$0" "$@"`), replacing
-  the absolute shebang that `make install` writes.
+  neighbouring `perl` (`exec "${0%/*}/perl" -x "$0" "$@"`, in effect), replacing
+  the absolute shebang that `make install` writes. The trampoline needs nothing
+  from the host but `/bin/sh`: it locates `perl` by parameter expansion, not
+  `dirname`, so it works with an empty `PATH`.
 
 One build-host fact is left in `%Config` on purpose: `$Config{osvers}` records
 the kernel of the machine that ran the build, so a `-gnu` archive built on a

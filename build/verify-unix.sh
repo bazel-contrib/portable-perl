@@ -75,6 +75,8 @@ leak_patterns=(
     '/opt/portable-perl'
     'portable-perl\.[A-Za-z0-9]\{8\}'   # the mktemp -d template
 )
+# Plus the toolchain roots that exist only inside the build images.
+leak_patterns+=("${BUILD_IMAGE_ROOTS[@]}")
 for pat in "${leak_patterns[@]}"; do
     hits="$(grep -rIl "${pat}" "${root}" 2>/dev/null || true)"
     if [[ -n "${hits}" ]]; then
@@ -229,6 +231,10 @@ fi
 log "Checking the rules_perl toolchain contract"
 check "bin/perl is present"  test -x "${moved}/bin/perl"
 check "bin/xsubpp is present" test -f "${moved}/bin/xsubpp"
+# The trampoline at the top of every bin/ script runs before perl does, so it
+# may rely on nothing but /bin/sh: no dirname, no PATH.
+check "bin/ trampolines need only /bin/sh" \
+    env -i PATH=/nonexistent "${moved}/bin/prove" --version
 check "CORE headers are present" \
     bash -c "ls \"${moved}\"/lib/*/*/CORE/perl.h >/dev/null 2>&1"
 check "CORE/config.h is present" \

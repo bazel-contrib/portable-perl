@@ -48,8 +48,11 @@ foreach ($dir in @('html', 'man')) {
 $unicoreTest = Join-Path $Prefix 'lib\unicore\TestNorm.pl'
 if (Test-Path $unicoreTest) { Remove-Item -Force $unicoreTest }
 
+# perldiag.pod stays: diagnostics.pm parses it at load time (see the Unix
+# post-processing for the details).
 Get-ChildItem -Path $Prefix -Recurse -File -Include '*.pod', '.packlist', 'perllocal.pod' `
-    -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
+    -ErrorAction SilentlyContinue | Where-Object { $_.Name -ne 'perldiag.pod' } |
+    Remove-Item -Force -ErrorAction SilentlyContinue
 
 # Debug and incremental-link leftovers. The import library (perl5xx.lib or
 # libperl.a) stays: XS modules link against it.
